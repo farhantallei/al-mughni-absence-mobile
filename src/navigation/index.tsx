@@ -1,5 +1,5 @@
 import { useGlobalState } from '@app/hooks';
-import { Register, Home, Absence } from '@app/screens';
+import { Register, Home, Absence, Login } from '@app/screens';
 import { RootStackParamList } from '@app/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
@@ -9,18 +9,21 @@ import { Button } from 'react-native';
 const Stack = createStackNavigator<RootStackParamList>();
 
 function Navigation() {
-  const [user, setUser] = useGlobalState<string | null>(['user']);
+  const [username, setUsername] = useGlobalState<string | null>(['username']);
 
   async function logout() {
-    await AsyncStorage.removeItem('user');
-    setUser(null);
+    await AsyncStorage.removeItem('username');
+    setUsername(null);
   }
 
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {user == null ? (
-          <Stack.Screen name="Register" component={Register} />
+        {username == null ? (
+          <>
+            <Stack.Screen name="Register" component={Register} />
+            <Stack.Screen name="Login" component={Login} />
+          </>
         ) : (
           <>
             <Stack.Screen

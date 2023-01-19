@@ -1,193 +1,283 @@
+import { Loading } from '@app/components';
 import { Button, Container, TextInput } from '@app/components/ui';
-import mudarrisin from '@app/data/mudarrisin.json';
+import { useGlobalState } from '@app/hooks';
+import { addAbsent, updateAbsent } from '@app/services/absent';
 import { RootStackScreenProps } from '@app/types';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker, PickerIOS } from '@react-native-picker/picker';
-import { useEffect, useState } from 'react';
 import {
-  Button as RNButton,
+  AbsentResponse,
+  PelajarResponse,
+  ProgramResponse,
+} from '@app/types/rest';
+import { formatDate } from '@app/utils';
+// import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  // Button as RNButton,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Text,
+  TextInput as TextInputRN,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import Toast from 'react-native-easy-toast';
 import styles from './Absence.styles';
 
-type Level = 'dasar' | 'lanjut';
-
-interface LevelOption {
-  label: string;
-  value: Level;
+interface form {
+  pelajarId: number;
+  pengajarId: number;
+  programId: number;
+  date: string;
+  reason?: string;
 }
 
-function Absence({ navigation, route }: RootStackScreenProps<'Absence'>) {
-  const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+type status = 'Alpha' | 'Hadir' | 'Tidak Hadir';
+
+function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
+  // const [date, setDate] = useState(new Date());
+  // const [showDatePicker, setShowDatePicker] = useState(false);
   const [showNotPresentModal, setShowNotPresentModal] = useState(false);
-  const [cause, setCause] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [error, setError] = useState(false);
+  const [userId] = useGlobalState<number>(['userId']);
+  const [pengajar] = useGlobalState<PelajarResponse[]>([
+    'pengajar',
+    { program: route.params.program.name },
+  ]);
+  const [absent] = useGlobalState<AbsentResponse | null>([
+    'absent',
+    { program: route.params.program.name, date: formatDate(new Date()) },
+  ]);
+  // const [programs, setPrograms] = useGlobalState<ProgramResponse[]>([
+  //   'program',
+  // ]);
+  const reasonInputRef = useRef<TextInputRN>(null);
+  const errorToastRef = useRef<Toast>(null);
+  const queryClient = useQueryClient();
 
-  const levelOptions: LevelOption[] = [
-    { label: 'Dasar', value: 'dasar' },
-    { label: 'Lanjut', value: 'lanjut' },
-  ];
-
-  const [level, setLevel] = useState<Level>('dasar');
-  const [mudarris, setMudarris] = useState('fuad');
-
-  const subject: Record<typeof route.params.subject, string> = {
-    'baca kitab': 'Baca Kitab',
-    tahfizh: 'Tahfizh',
+  const statusColor: Record<status, string> = {
+    Alpha: 'red',
+    Hadir: 'blue',
+    'Tidak Hadir': 'orange',
   };
 
+  const status = useMemo((): status => {
+    if (absent == null) return 'Alpha';
+    if (absent.present) return 'Hadir';
+    return 'Tidak Hadir';
+  }, [absent]);
+
+  const [form, setForm] = useState<form>({
+    pelajarId: userId,
+    pengajarId: absent?.pengajarId || 1,
+    programId: route.params.program.id,
+    date: formatDate(new Date()),
+  });
+
+  const { mutate: presentMutate, isLoading: isPresentLoading } = useMutation(
+    (present: boolean) => addAbsent({ ...form, present }),
+    {
+      onMutate: async present => {
+        await queryClient.cancelQueries({ queryKey: ['program'] });
+
+        const prevPrograms = queryClient.getQueryData<ProgramResponse[]>([
+          'program',
+        ]);
+
+        if (prevPrograms) {
+          queryClient.setQueryData<ProgramResponse[]>(
+            ['program'],
+            [
+              ...prevPrograms.filter(
+                program => program.id !== route.params.program.id,
+              ),
+              {
+                id: route.params.program.id,
+                program: route.params.program.name,
+                status: present ? 'present' : 'absent',
+                reason: form.reason || null,
+              },
+            ],
+          );
+        }
+
+        // if (prevPrograms) {
+        //   setPrograms([
+        //     ...prevPrograms.filter(
+        //       program => program.id !== route.params.program.id,
+        //     ),
+        //     {
+        //       id: route.params.program.id,
+        //       program: route.params.program.name,
+        //       status: present ? 'present' : 'absent',
+        //       reason: form.reason || null,
+        //     },
+        //   ]);
+        // }
+        resetError;
+
+        return { prevPrograms };
+      },
+      onError(error) {
+        if (error instanceof Error) errorToastRef.current?.show(error.message);
+        else if (error instanceof String) errorToastRef.current?.show(error);
+        else errorToastRef.current?.show('ada kesalahan teknis');
+      },
+      onSuccess() {
+        navigation.navigate('Home');
+      },
+    },
+  );
+
+  const { mutate: presentMutateUpdate, isLoading: isPresentUpdateLoading } =
+    useMutation((present: boolean) => updateAbsent({ ...form, present }), {
+      onMutate: async present => {
+        await queryClient.cancelQueries({ queryKey: ['program'] });
+
+        const prevPrograms = queryClient.getQueryData<ProgramResponse[]>([
+          'program',
+        ]);
+
+        if (prevPrograms) {
+          queryClient.setQueryData<ProgramResponse[]>(
+            ['program'],
+            [
+              ...prevPrograms.filter(
+                program => program.id !== route.params.program.id,
+              ),
+              {
+                id: route.params.program.id,
+                program: route.params.program.name,
+                status: present ? 'present' : 'absent',
+                reason: form.reason || null,
+              },
+            ],
+          );
+        }
+
+        // if (prevPrograms) {
+        //   setPrograms([
+        //     ...prevPrograms.filter(
+        //       program => program.id !== route.params.program.id,
+        //     ),
+        //     {
+        //       id: route.params.program.id,
+        //       program: route.params.program.name,
+        //       status: present ? 'present' : 'absent',
+        //       reason: form.reason || null,
+        //     },
+        //   ]);
+        // }
+        resetError;
+
+        return { prevPrograms };
+      },
+      onError(error) {
+        if (error instanceof Error) errorToastRef.current?.show(error.message);
+        else if (error instanceof String) errorToastRef.current?.show(error);
+        else errorToastRef.current?.show('ada kesalahan teknis');
+      },
+      onSuccess() {
+        navigation.navigate('Home');
+      },
+    });
+
   useEffect(() => {
-    if (cause != '') {
-      setError(false);
-      setErrorMessage('');
+    if (form.reason == null || form.reason === '') {
+      setError(true);
+      setErrorMessage('berikan udzur');
       return;
     }
-    setError(true);
-    setErrorMessage('berikan udzur');
-  }, [cause]);
+    setError(false);
+    setErrorMessage('');
+  }, [form.reason]);
 
-  function onDateChange(event: any, selectedDate: Date | undefined) {
-    if (Platform.OS === 'android') setShowDatePicker(false);
-    if (selectedDate) setDate(selectedDate);
+  // function onDateChange(_event: any, selectedDate: Date | undefined) {
+  //   if (Platform.OS === 'android') setShowDatePicker(false);
+  //   if (selectedDate) setDate(selectedDate);
+  // }
+
+  function resetError() {
+    setError(false);
+    setErrorMessage('');
+  }
+
+  function handleHadir() {
+    if (absent == null) return presentMutate(true);
+    presentMutateUpdate(true);
+  }
+
+  function handleTidakHadir() {
+    if (error) {
+      reasonInputRef.current?.focus();
+      errorToastRef.current?.show('isi formnya dulu');
+      return;
+    }
+    if (absent == null) return presentMutate(false);
+    presentMutateUpdate(false);
   }
 
   return (
     <Container>
       <View style={styles.form}>
-        <Text style={styles.title}>{subject[route.params.subject]}</Text>
-        {route.params.subject === 'baca kitab' ? (
-          <>
-            <Text
-              style={{
-                textAlign: Platform.OS === 'ios' ? 'center' : undefined,
-              }}>
-              Kelas
-            </Text>
-            {Platform.OS === 'ios' ? (
-              <PickerIOS
-                selectedValue={level}
-                onValueChange={value => setLevel(value as Level)}>
-                {levelOptions.map(picker => (
-                  <PickerIOS.Item
-                    key={picker.value}
-                    label={picker.label}
-                    value={picker.value}
-                  />
-                ))}
-              </PickerIOS>
-            ) : (
-              <Picker
-                selectedValue={level}
-                onValueChange={value => setLevel(value)}>
-                {levelOptions.map(picker => (
-                  <Picker.Item
-                    key={picker.value}
-                    label={picker.label}
-                    value={picker.value}
-                  />
-                ))}
-              </Picker>
-            )}
-          </>
-        ) : undefined}
+        <Text style={styles.title}>{route.params.program.name}</Text>
+        <Text style={{ textAlign: 'center' }}>
+          <Text>Status: </Text>
+          <Text
+            style={{
+              fontWeight: 'bold',
+              color: statusColor[status] || undefined,
+            }}>
+            {status}
+          </Text>
+        </Text>
+        {absent?.present === false ? (
+          <Text style={{ textAlign: 'center' }}>
+            <Text>Alasan:</Text>
+            <Text style={{ fontWeight: 'bold' }}>{absent.reason}</Text>
+          </Text>
+        ) : null}
         <Text
-          style={{ textAlign: Platform.OS === 'ios' ? 'center' : undefined }}>
+          style={[
+            styles.subtitle,
+            {
+              textAlign: Platform.OS === 'ios' ? 'center' : undefined,
+            },
+          ]}>
           Pengajar
         </Text>
-        {route.params.subject === 'baca kitab' ? (
-          Platform.OS === 'ios' ? (
-            <PickerIOS
-              selectedValue={mudarris}
-              onValueChange={value => setMudarris(value as string)}>
-              {mudarrisin
-                .filter(mudarris =>
-                  mudarris.ngajar.some(ngajar =>
-                    ngajar.includes(route.params.subject),
-                  ),
-                )
-                .filter(mudarris =>
-                  mudarris.ngajar.some(ngajar => ngajar.includes(level)),
-                )
-                .map(mudarris => (
-                  <Picker.Item
-                    key={mudarris.name}
-                    label={mudarris.name.toUpperCase()}
-                    value={mudarris.name}
-                  />
-                ))}
-            </PickerIOS>
-          ) : (
-            <Picker
-              selectedValue={mudarris}
-              onValueChange={value => setMudarris(value)}>
-              {mudarrisin
-                .filter(mudarris =>
-                  mudarris.ngajar.some(ngajar =>
-                    ngajar.includes(route.params.subject),
-                  ),
-                )
-                .filter(mudarris =>
-                  mudarris.ngajar.some(ngajar => ngajar.includes(level)),
-                )
-                .map(mudarris => (
-                  <Picker.Item
-                    key={mudarris.name}
-                    label={mudarris.name.toUpperCase()}
-                    value={mudarris.name}
-                  />
-                ))}
-            </Picker>
-          )
-        ) : Platform.OS === 'ios' ? (
-          <PickerIOS
-            selectedValue={mudarris}
-            onValueChange={value => setMudarris(value as string)}>
-            {mudarrisin
-              .filter(mudarris =>
-                mudarris.ngajar.some(ngajar =>
-                  ngajar.includes(route.params.subject),
-                ),
-              )
-              .map(mudarris => (
-                <Picker.Item
-                  key={mudarris.name}
-                  label={mudarris.name.toUpperCase()}
-                  value={mudarris.name}
-                />
-              ))}
-          </PickerIOS>
-        ) : (
-          <Picker
-            selectedValue={mudarris}
-            onValueChange={value => setMudarris(value)}>
-            {mudarrisin
-              .filter(mudarris =>
-                mudarris.ngajar.some(ngajar =>
-                  ngajar.includes(route.params.subject),
-                ),
-              )
-              .map(mudarris => (
-                <Picker.Item
-                  key={mudarris.name}
-                  label={mudarris.name.toUpperCase()}
-                  value={mudarris.name}
-                />
-              ))}
-          </Picker>
-        )}
-        {Platform.OS === 'android' ? (
+        <Picker
+          style={{
+            marginBottom: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(0,0,0,.1)',
+            borderRadius: 12,
+          }}
+          selectedValue={form.pengajarId}
+          onValueChange={value =>
+            setForm(prevForm => ({ ...prevForm, pengajarId: value }))
+          }>
+          {pengajar.map(item => (
+            <Picker.Item key={item.id} label={item.name} value={item.id} />
+          ))}
+        </Picker>
+        <Text style={[styles.subtitle, { textAlign: 'center' }]}>
+          {new Intl.DateTimeFormat('id-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }).format()}
+        </Text>
+        {/* {Platform.OS === 'android' ? (
           <RNButton
             title={dateFormatter(date)}
             onPress={() => setShowDatePicker(true)}
           />
-        ) : undefined}
+        ) : null}
         {Platform.OS === 'ios' || showDatePicker ? (
           <DateTimePicker
             testID="dateTimePicker"
@@ -197,7 +287,7 @@ function Absence({ navigation, route }: RootStackScreenProps<'Absence'>) {
             display="default"
             onChange={onDateChange}
           />
-        ) : undefined}
+        ) : null} */}
       </View>
       <View style={{ flexDirection: 'row' }}>
         <Button
@@ -208,9 +298,10 @@ function Absence({ navigation, route }: RootStackScreenProps<'Absence'>) {
           Tidak hadir
         </Button>
         <Button
+          onPress={handleHadir}
           row
           backgroundColor="green"
-          disabled={date === undefined}
+          // disabled={date === undefined}
           style={{ marginLeft: 8 }}>
           Hadir
         </Button>
@@ -222,47 +313,61 @@ function Absence({ navigation, route }: RootStackScreenProps<'Absence'>) {
         onRequestClose={() => setShowNotPresentModal(false)}
         style={{ elevation: 20 }}>
         <Container>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.modalContainer}>
-              <Text style={{ color: 'red', alignSelf: 'flex-start' }}>
-                {errorMessage}
-              </Text>
-              <TextInput
-                style={{ width: '100%' }}
-                placeholder="Alasan tidak hadir"
-                onChangeText={text => setCause(text)}
-                error={error}
-              />
-              <View style={{ flexDirection: 'row' }}>
-                <Button
-                  onPress={() => setShowNotPresentModal(false)}
-                  row
-                  backgroundColor="#bbb"
-                  style={{ marginRight: 8 }}>
-                  Cancel
-                </Button>
-                <Button
-                  row
-                  backgroundColor="#007aff"
-                  disabled={date === undefined}
-                  style={{ marginLeft: 8 }}>
-                  Submit
-                </Button>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.container}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.modalContainer}>
+                <Text style={{ color: 'red', alignSelf: 'flex-start' }}>
+                  {errorMessage}
+                </Text>
+                <TextInput
+                  style={{ width: '100%' }}
+                  placeholder="Alasan tidak hadir"
+                  onChangeText={text =>
+                    setForm(prevForm => ({ ...prevForm, reason: text }))
+                  }
+                  error={error}
+                  ref={reasonInputRef}
+                />
+                <View style={{ flexDirection: 'row' }}>
+                  <Button
+                    onPress={() => setShowNotPresentModal(false)}
+                    row
+                    backgroundColor="#bbb"
+                    style={{ marginRight: 8 }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onPress={handleTidakHadir}
+                    row
+                    backgroundColor="#007aff"
+                    style={{ marginLeft: 8 }}>
+                    Submit
+                  </Button>
+                </View>
               </View>
-            </View>
-          </TouchableWithoutFeedback>
+            </TouchableWithoutFeedback>
+            <Toast
+              ref={errorToastRef}
+              opacity={0.6}
+              style={{ backgroundColor: 'red' }}
+            />
+          </KeyboardAvoidingView>
+          <Loading isLoading={isPresentLoading || isPresentUpdateLoading} />
         </Container>
       </Modal>
+      <Loading isLoading={isPresentLoading || isPresentUpdateLoading} />
     </Container>
   );
 }
 
-function dateFormatter(date: Date) {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
-}
+// function dateFormatter(date: Date) {
+//   return new Intl.DateTimeFormat(undefined, {
+//     month: 'short',
+//     day: 'numeric',
+//     year: 'numeric',
+//   }).format(date);
+// }
 
 export default Absence;

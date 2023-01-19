@@ -9,8 +9,9 @@ declare global {
 
 export type RootStackParamList = {
   Register: undefined;
+  Login: undefined;
   Home: undefined;
-  Absence: { subject: 'baca kitab' | 'tahfizh' };
+  Absence: { program: { id: number; name: string } };
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> =
