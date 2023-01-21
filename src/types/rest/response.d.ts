@@ -6,7 +6,7 @@ export interface PelajarResponse {
 
 export interface AbsentResponse {
   id: number;
-  pengajarId: number;
+  pengajarId: number | null;
   programId: number;
   date: Date;
   present: boolean;
@@ -15,7 +15,9 @@ export interface AbsentResponse {
 
 export interface ProgramResponse {
   id: number;
-  program: string;
+  name: string;
+  individual: boolean;
+  pengajar: boolean;
   status: 'alpha' | 'present' | 'absent';
   reason: string | null;
 }

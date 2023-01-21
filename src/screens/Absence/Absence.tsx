@@ -29,7 +29,7 @@ import styles from './Absence.styles';
 
 interface form {
   pelajarId: number;
-  pengajarId: number;
+  pengajarId?: number;
   programId: number;
   date: string;
   reason?: string;
@@ -73,7 +73,9 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
 
   const [form, setForm] = useState<form>({
     pelajarId: userId,
-    pengajarId: absent?.pengajarId || 1,
+    pengajarId: route.params.program.individual
+      ? undefined
+      : absent?.pengajarId || 1,
     programId: route.params.program.id,
     date: formatDate(new Date()),
   });
@@ -89,19 +91,26 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
         ]);
 
         if (prevPrograms) {
+          const programs: ProgramResponse[] = [
+            ...prevPrograms.filter(
+              program => program.id !== route.params.program.id,
+            ),
+            {
+              id: route.params.program.id,
+              name: route.params.program.name,
+              individual: route.params.program.individual,
+              pengajar: false,
+              status: present ? 'present' : 'absent',
+              reason: form.reason || null,
+            },
+          ];
           queryClient.setQueryData<ProgramResponse[]>(
             ['program'],
-            [
-              ...prevPrograms.filter(
-                program => program.id !== route.params.program.id,
-              ),
-              {
-                id: route.params.program.id,
-                program: route.params.program.name,
-                status: present ? 'present' : 'absent',
-                reason: form.reason || null,
-              },
-            ],
+            programs.sort((a, b) => {
+              if (a.id < b.id) return -1;
+              if (a.id > b.id) return 1;
+              return 0;
+            }),
           );
         }
 
@@ -143,19 +152,26 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
         ]);
 
         if (prevPrograms) {
+          const programs: ProgramResponse[] = [
+            ...prevPrograms.filter(
+              program => program.id !== route.params.program.id,
+            ),
+            {
+              id: route.params.program.id,
+              name: route.params.program.name,
+              individual: route.params.program.individual,
+              pengajar: false,
+              status: present ? 'present' : 'absent',
+              reason: form.reason || null,
+            },
+          ];
           queryClient.setQueryData<ProgramResponse[]>(
             ['program'],
-            [
-              ...prevPrograms.filter(
-                program => program.id !== route.params.program.id,
-              ),
-              {
-                id: route.params.program.id,
-                program: route.params.program.name,
-                status: present ? 'present' : 'absent',
-                reason: form.reason || null,
-              },
-            ],
+            programs.sort((a, b) => {
+              if (a.id < b.id) return -1;
+              if (a.id > b.id) return 1;
+              return 0;
+            }),
           );
         }
 
@@ -241,30 +257,34 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
             <Text style={{ fontWeight: 'bold' }}>{absent.reason}</Text>
           </Text>
         ) : null}
-        <Text
-          style={[
-            styles.subtitle,
-            {
-              textAlign: Platform.OS === 'ios' ? 'center' : undefined,
-            },
-          ]}>
-          Pengajar
-        </Text>
-        <Picker
-          style={{
-            marginBottom: 12,
-            borderWidth: 1,
-            borderColor: 'rgba(0,0,0,.1)',
-            borderRadius: 12,
-          }}
-          selectedValue={form.pengajarId}
-          onValueChange={value =>
-            setForm(prevForm => ({ ...prevForm, pengajarId: value }))
-          }>
-          {pengajar.map(item => (
-            <Picker.Item key={item.id} label={item.name} value={item.id} />
-          ))}
-        </Picker>
+        {route.params.program.individual ? null : (
+          <>
+            <Text
+              style={[
+                styles.subtitle,
+                {
+                  textAlign: Platform.OS === 'ios' ? 'center' : undefined,
+                },
+              ]}>
+              Pengajar
+            </Text>
+            <Picker
+              style={{
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: 'rgba(0,0,0,.1)',
+                borderRadius: 12,
+              }}
+              selectedValue={form.pengajarId}
+              onValueChange={value =>
+                setForm(prevForm => ({ ...prevForm, pengajarId: value }))
+              }>
+              {pengajar.map(item => (
+                <Picker.Item key={item.id} label={item.name} value={item.id} />
+              ))}
+            </Picker>
+          </>
+        )}
         <Text style={[styles.subtitle, { textAlign: 'center' }]}>
           {new Intl.DateTimeFormat('id-GB', {
             day: 'numeric',

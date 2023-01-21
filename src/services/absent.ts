@@ -22,7 +22,7 @@ export function getAbsent({
 
 export function addAbsent(data: {
   pelajarId: number;
-  pengajarId: number;
+  pengajarId?: number;
   programId: number;
   date: string;
   present: boolean;
@@ -33,7 +33,7 @@ export function addAbsent(data: {
 
 export function updateAbsent(data: {
   pelajarId: number;
-  pengajarId: number;
+  pengajarId?: number;
   programId: number;
   date: string;
   present: boolean;

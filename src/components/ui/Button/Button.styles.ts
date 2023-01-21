@@ -2,6 +2,8 @@ import { StyleSheet, ViewStyle } from 'react-native';
 
 export interface ButtonStyleProps {
   row?: boolean;
+  hug?: boolean;
+  paddingHorizontal?: ViewStyle['paddingHorizontal'];
   height?: ViewStyle['height'];
   marginBottom?: ViewStyle['marginBottom'];
   backgroundColor?: ViewStyle['backgroundColor'];
@@ -48,6 +50,7 @@ export default StyleSheet.create(
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 12,
+      paddingHorizontal: props.hug ? props.paddingHorizontal || 12 : undefined,
     },
     label: {
       color: '#ffffff',

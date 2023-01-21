@@ -11,7 +11,7 @@ export type RootStackParamList = {
   Register: undefined;
   Login: undefined;
   Home: undefined;
-  Absence: { program: { id: number; name: string } };
+  Absence: { program: { id: number; name: string; individual: boolean } };
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> =

@@ -1,28 +1,51 @@
 import { Button } from '@app/components/ui';
-import { useRef } from 'react';
 import { View, Text, ColorValue } from 'react-native';
 import Toast from 'react-native-easy-toast';
 
-type Status = 'alpha' | 'present' | 'absent';
-type Indicator<T = String> = Record<Status, T>;
+type PresentStatus = 'alpha' | 'present' | 'absent';
+type PresentIndicator<T = String> = Record<PresentStatus, T>;
+type ProgramStatus = 'available' | 'unavailable' | 'alibi';
+type ProgramIndicator<T = String> = Record<ProgramStatus, T>;
 
 interface ItemProps {
   toastRef: React.RefObject<Toast>;
   program: string;
-  status: Status;
+  individual: boolean;
+  pengajar: boolean;
+  status: PresentStatus;
   reason: string | null;
   onPress?: () => void;
 }
-function Item({ toastRef, program, status, reason, onPress }: ItemProps) {
-  const indicatorLabel: Indicator = {
+function Item({
+  toastRef,
+  program,
+  individual,
+  pengajar,
+  status,
+  reason,
+  onPress,
+}: ItemProps) {
+  const presentIndicatorLabel: PresentIndicator = {
     alpha: 'Alpha',
     present: 'Hadir',
     absent: 'Tidak Hadir',
   };
-  const indicatorColor: Indicator<ColorValue> = {
+  const presentIndicatorColor: PresentIndicator<ColorValue> = {
     alpha: 'red',
     present: 'blue',
     absent: 'orange',
+  };
+
+  const programIndicatorLabel: ProgramIndicator = {
+    available: 'Tersedia',
+    unavailable: 'Tidak Ada',
+    alibi: 'Isi sendiri',
+  };
+
+  const programIndicatorColor: ProgramIndicator<ColorValue> = {
+    available: 'green',
+    unavailable: 'red',
+    alibi: 'orange',
   };
 
   return (
@@ -49,9 +72,14 @@ function Item({ toastRef, program, status, reason, onPress }: ItemProps) {
         <Text
           style={{
             fontWeight: 'bold',
-            color: indicatorColor[status] || undefined,
+            color:
+              individual || !pengajar
+                ? presentIndicatorColor[status]
+                : programIndicatorColor['unavailable'],
           }}>
-          {indicatorLabel[status]}
+          {individual || !pengajar
+            ? presentIndicatorLabel[status]
+            : programIndicatorLabel['unavailable']}
         </Text>
       </Text>
       {reason ? (
@@ -60,21 +88,37 @@ function Item({ toastRef, program, status, reason, onPress }: ItemProps) {
           <Text>{reason}</Text>
         </Text>
       ) : null}
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          marginTop: 12,
+        }}>
         <Button
-          style={{ width: 100, marginRight: 12 }}
+          style={{ marginRight: 12 }}
+          hug
           onPress={() => {
             toastRef.current?.show('Coming soon');
           }}
           backgroundColor="#7286D3">
           Print
         </Button>
-        <Button
-          style={{ width: 100 }}
-          onPress={onPress}
-          backgroundColor={indicatorColor[status]}>
-          Absen
-        </Button>
+        {individual || !pengajar ? (
+          <Button
+            hug
+            onPress={onPress}
+            backgroundColor={presentIndicatorColor[status]}>
+            Absen
+          </Button>
+        ) : (
+          <Button
+            hug
+            onPress={() => {
+              toastRef.current?.show('On working');
+            }}>
+            Mulai
+          </Button>
+        )}
       </View>
     </View>
   );
