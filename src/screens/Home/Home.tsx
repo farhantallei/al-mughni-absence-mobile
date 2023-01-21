@@ -25,25 +25,30 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const queryClient = useQueryClient();
   const isFetching = useIsFetching(['pengajar']) + useIsFetching(['absent']);
 
-  async function prefetchAbsence(id: number, program: string) {
+  async function prefetchAbsence(programId: number, programName: string) {
     try {
       await queryClient.prefetchQuery({
-        queryKey: ['pengajar', { program }],
-        queryFn: () => getPengajar(program),
+        queryKey: ['pengajar', { program: programName }],
+        queryFn: () => getPengajar(programName),
         retry: 1,
       });
 
       await queryClient.prefetchQuery({
-        queryKey: ['absent', { program, date: formatDate(new Date()) }],
+        queryKey: [
+          'absent',
+          { program: programName, date: formatDate(new Date()) },
+        ],
         queryFn: () =>
           getAbsent({
             pelajarId: userId,
-            programId: id,
+            programId: programId,
             date: formatDate(new Date()),
           }),
         retry: 1,
       });
-      navigation.push('Absence', { program: { id, name: program } });
+      navigation.push('Absence', {
+        program: { id: programId, name: programName },
+      });
     } catch (err) {
       if (err instanceof Error) errorToastRef.current?.show(err.message);
       else if (err instanceof String) errorToastRef.current?.show(err);
@@ -73,12 +78,12 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
           {programs
             ? programs.map(program => (
                 <ProgramList.Item
-                  key={program.program}
+                  key={program.id}
                   toastRef={toastRef}
-                  program={program.program}
+                  program={program.name}
                   status={program.status}
                   reason={program.reason}
-                  onPress={() => prefetchAbsence(program.id, program.program)}
+                  onPress={() => prefetchAbsence(program.id, program.name)}
                 />
               ))
             : null}

@@ -97,7 +97,7 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
               ),
               {
                 id: route.params.program.id,
-                program: route.params.program.name,
+                name: route.params.program.name,
                 status: present ? 'present' : 'absent',
                 reason: form.reason || null,
               },
@@ -151,7 +151,7 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
               ),
               {
                 id: route.params.program.id,
-                program: route.params.program.name,
+                name: route.params.program.name,
                 status: present ? 'present' : 'absent',
                 reason: form.reason || null,
               },

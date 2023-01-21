@@ -15,7 +15,7 @@ export interface AbsentResponse {
 
 export interface ProgramResponse {
   id: number;
-  program: string;
+  name: string;
   status: 'alpha' | 'present' | 'absent';
   reason: string | null;
 }
