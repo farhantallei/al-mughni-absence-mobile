@@ -22,6 +22,7 @@ function Login() {
   const [error, setError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [usernameForm, setUsernameForm] = useState('');
+  const [userId, setUserId] = useGlobalState<number | null>(['userId']);
   const [username, setUsername] = useGlobalState<string | null>(['username']);
   const [name, setName] = useGlobalState<string | null>(['name']);
   const usernameInputRef = useRef<TextInputRN>(null);
@@ -46,6 +47,7 @@ function Login() {
         });
 
         await AsyncStorage.setItem('username', data.username);
+        setUserId(data.id);
         setUsername(data.username);
         setName(data.name);
       },
