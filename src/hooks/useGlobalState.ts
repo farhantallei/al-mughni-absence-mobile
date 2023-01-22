@@ -1,7 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export function useGlobalState<S>(
-  key: string[] | (string | Record<string, string>)[],
+  key:
+    | string[]
+    | (string | Record<string, string>)[]
+    | (string | Record<string, number>)[],
   initialState?: S | (() => S),
 ) {
   const client = useQueryClient();

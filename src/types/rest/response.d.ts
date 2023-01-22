@@ -15,9 +15,27 @@ export interface AbsentResponse {
 
 export interface ProgramResponse {
   id: number;
+  pengajarId: number | null;
   name: string;
   individual: boolean;
   pengajar: boolean;
-  status: 'alpha' | 'present' | 'absent';
+  presentStatus: 'alpha' | 'present' | 'absent';
+  programStatus: 'available' | 'unavailable' | 'alibi';
+  reason: string | null;
+}
+
+export interface ScheduleResponse {
+  id: number;
+  programId: number;
+  date: Date;
+  available: boolean;
+  reason: string | null;
+}
+
+export interface PelajarOnPengajarResponse {
+  pengajarId: number;
+  pelajarId: number;
+  programId: number;
+  programStatus: 'available' | 'unavailable' | 'alibi';
   reason: string | null;
 }

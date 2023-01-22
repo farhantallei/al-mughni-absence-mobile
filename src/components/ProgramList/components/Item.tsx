@@ -1,30 +1,28 @@
 import { Button } from '@app/components/ui';
 import { View, Text, ColorValue } from 'react-native';
 import Toast from 'react-native-easy-toast';
+import { ItemContext, useItemContext } from './Item.context';
+import type { PresentStatus, ProgramStatus } from './Item.context';
 
-type PresentStatus = 'alpha' | 'present' | 'absent';
-type PresentIndicator<T = String> = Record<PresentStatus, T>;
-type ProgramStatus = 'available' | 'unavailable' | 'alibi';
-type ProgramIndicator<T = String> = Record<ProgramStatus, T>;
+type PresentIndicator<T = string> = Record<PresentStatus, T>;
+type ProgramIndicator<T = string> = Record<ProgramStatus, T>;
 
 interface ItemProps {
   toastRef: React.RefObject<Toast>;
+  pengajarName: string;
+  pengajarId: number | null;
   program: string;
   individual: boolean;
   pengajar: boolean;
-  status: PresentStatus;
+  presentStatus: PresentStatus;
+  programStatus: ProgramStatus;
   reason: string | null;
-  onPress?: () => void;
+  onAbsen?: () => void;
+  onRegister?: () => void;
+  onStart?: () => void;
+  onChange?: () => void;
 }
-function Item({
-  toastRef,
-  program,
-  individual,
-  pengajar,
-  status,
-  reason,
-  onPress,
-}: ItemProps) {
+function Item({ presentStatus, programStatus, ...rest }: ItemProps) {
   const presentIndicatorLabel: PresentIndicator = {
     alpha: 'Alpha',
     present: 'Hadir',
@@ -39,7 +37,7 @@ function Item({
   const programIndicatorLabel: ProgramIndicator = {
     available: 'Tersedia',
     unavailable: 'Tidak Ada',
-    alibi: 'Isi sendiri',
+    alibi: 'Berhalangan',
   };
 
   const programIndicatorColor: ProgramIndicator<ColorValue> = {
@@ -48,79 +46,198 @@ function Item({
     alibi: 'orange',
   };
 
+  const value: ItemContext = {
+    presentIndicatorColor: presentIndicatorColor[presentStatus],
+    presentIndicatorLabel: presentIndicatorLabel[presentStatus],
+    programIndicatorColor: programIndicatorColor[programStatus],
+    programIndicatorLabel: programIndicatorLabel[programStatus],
+    programStatus,
+    presentStatus,
+    ...rest,
+  };
+
   return (
-    <View
-      style={{
-        borderWidth: 1,
-        borderRadius: 16,
-        borderColor: 'rgba(0,0,0,.1)',
-        marginBottom: 16,
-        padding: 12,
-      }}>
-      <Text>
-        <Text>Program: </Text>
-        <Text
-          style={{
-            fontWeight: 'bold',
-            // color: statusColor[status] || undefined,
-          }}>
-          {program}
-        </Text>
-      </Text>
-      <Text>
-        <Text>Status: </Text>
-        <Text
-          style={{
-            fontWeight: 'bold',
-            color:
-              individual || !pengajar
-                ? presentIndicatorColor[status]
-                : programIndicatorColor['unavailable'],
-          }}>
-          {individual || !pengajar
-            ? presentIndicatorLabel[status]
-            : programIndicatorLabel['unavailable']}
-        </Text>
-      </Text>
-      {reason ? (
-        <Text>
-          <Text>Udzur: </Text>
-          <Text>{reason}</Text>
-        </Text>
-      ) : null}
+    <ItemContext.Provider value={value}>
       <View
         style={{
-          flexDirection: 'row',
-          justifyContent: 'flex-end',
-          marginTop: 12,
+          borderWidth: 1,
+          borderRadius: 16,
+          borderColor: 'rgba(0,0,0,.1)',
+          marginBottom: 16,
+          padding: 12,
         }}>
-        <Button
-          style={{ marginRight: 12 }}
-          hug
-          onPress={() => {
-            toastRef.current?.show('Coming soon');
-          }}
-          backgroundColor="#7286D3">
-          Print
-        </Button>
-        {individual || !pengajar ? (
+        <Text>
+          <Text>Program: </Text>
+          <Text style={{ fontWeight: 'bold' }}>{rest.program}</Text>
+        </Text>
+        {rest.pengajarId != null ? (
+          <>
+            <Information keyLabel="Pengajar" label={rest.pengajarName} />
+            <Information
+              keyLabel="Status"
+              color={programIndicatorColor[programStatus]}
+              label={programIndicatorLabel[programStatus]}
+            />
+          </>
+        ) : null}
+        <PresentStatus keyLabel="Kehadiran" />
+        <ReasonStatus keyLabel="Udzur" />
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            marginTop: 12,
+          }}>
           <Button
-            hug
-            onPress={onPress}
-            backgroundColor={presentIndicatorColor[status]}>
-            Absen
-          </Button>
-        ) : (
-          <Button
+            style={{ marginRight: 12 }}
             hug
             onPress={() => {
-              toastRef.current?.show('On working');
-            }}>
-            Mulai
+              rest.toastRef.current?.show('Coming soon');
+            }}
+            backgroundColor="#7286D3">
+            Print
           </Button>
-        )}
+          <SubmitButton />
+        </View>
       </View>
-    </View>
+    </ItemContext.Provider>
+  );
+}
+
+function PresentStatus({ keyLabel }: { keyLabel: string }) {
+  const {
+    individual,
+    presentIndicatorColor,
+    presentIndicatorLabel,
+    pengajar,
+    pengajarId,
+    programStatus,
+  } = useItemContext();
+
+  if (individual)
+    return (
+      <Information
+        keyLabel={keyLabel}
+        color={presentIndicatorColor}
+        label={presentIndicatorLabel}
+      />
+    );
+
+  if (pengajar) return null;
+
+  if (programStatus === 'alibi') return null;
+
+  if (pengajarId != null) {
+    return (
+      <Information
+        keyLabel={keyLabel}
+        color={presentIndicatorColor}
+        label={presentIndicatorLabel}
+      />
+    );
+  }
+
+  return null;
+}
+
+function ReasonStatus({ keyLabel }: { keyLabel: string }) {
+  const { individual, pengajar, pengajarId, reason, programStatus } =
+    useItemContext();
+
+  if (individual) {
+    if (reason) return <Information keyLabel={keyLabel} label={reason} />;
+  }
+  if (pengajar) {
+    if (reason)
+      return <Information keyLabel={`${keyLabel} Pengajar`} label={reason} />;
+  }
+  if (pengajarId != null) {
+    const label = programStatus === 'alibi' ? `${keyLabel} Pengajar` : keyLabel;
+    if (reason) return <Information keyLabel={label} label={reason} />;
+    return null;
+  }
+  return null;
+}
+
+function SubmitButton() {
+  const {
+    individual,
+    presentIndicatorColor,
+    pengajar,
+    pengajarId,
+    programStatus,
+    onAbsen,
+    onRegister,
+    onStart,
+    onChange,
+    toastRef,
+  } = useItemContext();
+
+  if (individual)
+    return (
+      <Button hug onPress={onAbsen} backgroundColor={presentIndicatorColor}>
+        Absen
+      </Button>
+    );
+  if (pengajar) {
+    if (programStatus === 'available')
+      return (
+        <Button hug onPress={onChange} backgroundColor="orange">
+          Udzur
+        </Button>
+      );
+    return (
+      <Button
+        hug
+        onPress={() => {
+          if (programStatus === 'alibi') return onChange?.();
+          onStart?.();
+        }}
+        backgroundColor="green">
+        Mulai
+      </Button>
+    );
+  }
+  if (pengajarId != null) {
+    if (programStatus === 'alibi')
+      return (
+        <Button hug disabled>
+          Libur
+        </Button>
+      );
+    if (programStatus === 'unavailable')
+      return (
+        <Button hug disabled>
+          Tidak ada
+        </Button>
+      );
+    return (
+      <Button hug onPress={onAbsen} backgroundColor={presentIndicatorColor}>
+        Absen
+      </Button>
+    );
+  }
+  return (
+    <Button hug onPress={onRegister}>
+      Register
+    </Button>
+  );
+}
+
+function Information({
+  keyLabel,
+  color,
+  label,
+}: {
+  keyLabel: string;
+  color?: ColorValue;
+  label: string;
+}) {
+  return (
+    <Text>
+      <Text>{keyLabel}: </Text>
+      <Text style={{ fontWeight: 'bold', color }}>{label}</Text>
+    </Text>
   );
 }
 

@@ -3,18 +3,11 @@ import { Button, Container, TextInput } from '@app/components/ui';
 import { useGlobalState } from '@app/hooks';
 import { addAbsent, updateAbsent } from '@app/services/absent';
 import { RootStackScreenProps } from '@app/types';
-import {
-  AbsentResponse,
-  PelajarResponse,
-  ProgramResponse,
-} from '@app/types/rest';
+import { AbsentResponse, ProgramResponse } from '@app/types/rest';
 import { formatDate } from '@app/utils';
-// import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  // Button as RNButton,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -38,23 +31,14 @@ interface form {
 type status = 'Alpha' | 'Hadir' | 'Tidak Hadir';
 
 function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
-  // const [date, setDate] = useState(new Date());
-  // const [showDatePicker, setShowDatePicker] = useState(false);
   const [showNotPresentModal, setShowNotPresentModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [error, setError] = useState(false);
   const [userId] = useGlobalState<number>(['userId']);
-  const [pengajar] = useGlobalState<PelajarResponse[]>([
-    'pengajar',
-    { program: route.params.program.name },
-  ]);
   const [absent] = useGlobalState<AbsentResponse | null>([
     'absent',
     { program: route.params.program.name, date: formatDate(new Date()) },
   ]);
-  // const [programs, setPrograms] = useGlobalState<ProgramResponse[]>([
-  //   'program',
-  // ]);
   const reasonInputRef = useRef<TextInputRN>(null);
   const errorToastRef = useRef<Toast>(null);
   const queryClient = useQueryClient();
@@ -73,9 +57,7 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
 
   const [form, setForm] = useState<form>({
     pelajarId: userId,
-    pengajarId: route.params.program.individual
-      ? undefined
-      : absent?.pengajarId || 1,
+    pengajarId: route.params.program.pengajarId || undefined,
     programId: route.params.program.id,
     date: formatDate(new Date()),
   });
@@ -100,7 +82,9 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
               name: route.params.program.name,
               individual: route.params.program.individual,
               pengajar: false,
-              status: present ? 'present' : 'absent',
+              presentStatus: present ? 'present' : 'absent',
+              programStatus: 'available',
+              pengajarId: route.params.program.pengajarId,
               reason: form.reason || null,
             },
           ];
@@ -161,7 +145,9 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
               name: route.params.program.name,
               individual: route.params.program.individual,
               pengajar: false,
-              status: present ? 'present' : 'absent',
+              presentStatus: present ? 'present' : 'absent',
+              programStatus: 'available',
+              pengajarId: route.params.program.pengajarId,
               reason: form.reason || null,
             },
           ];
@@ -241,6 +227,14 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
     <Container>
       <View style={styles.form}>
         <Text style={styles.title}>{route.params.program.name}</Text>
+        {route.params.program.pengajarName ? (
+          <Text style={{ textAlign: 'center' }}>
+            <Text>Pengajar: </Text>
+            <Text style={{ fontWeight: 'bold' }}>
+              {route.params.program.pengajarName}
+            </Text>
+          </Text>
+        ) : null}
         <Text style={{ textAlign: 'center' }}>
           <Text>Status: </Text>
           <Text
@@ -257,34 +251,6 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
             <Text style={{ fontWeight: 'bold' }}>{absent.reason}</Text>
           </Text>
         ) : null}
-        {route.params.program.individual ? null : (
-          <>
-            <Text
-              style={[
-                styles.subtitle,
-                {
-                  textAlign: Platform.OS === 'ios' ? 'center' : undefined,
-                },
-              ]}>
-              Pengajar
-            </Text>
-            <Picker
-              style={{
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: 'rgba(0,0,0,.1)',
-                borderRadius: 12,
-              }}
-              selectedValue={form.pengajarId}
-              onValueChange={value =>
-                setForm(prevForm => ({ ...prevForm, pengajarId: value }))
-              }>
-              {pengajar.map(item => (
-                <Picker.Item key={item.id} label={item.name} value={item.id} />
-              ))}
-            </Picker>
-          </>
-        )}
         <Text style={[styles.subtitle, { textAlign: 'center' }]}>
           {new Intl.DateTimeFormat('id-GB', {
             day: 'numeric',
@@ -292,22 +258,6 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
             year: 'numeric',
           }).format()}
         </Text>
-        {/* {Platform.OS === 'android' ? (
-          <RNButton
-            title={dateFormatter(date)}
-            onPress={() => setShowDatePicker(true)}
-          />
-        ) : null}
-        {Platform.OS === 'ios' || showDatePicker ? (
-          <DateTimePicker
-            testID="dateTimePicker"
-            value={date}
-            mode={'date'}
-            is24Hour
-            display="default"
-            onChange={onDateChange}
-          />
-        ) : null} */}
       </View>
       <View style={{ flexDirection: 'row' }}>
         <Button
@@ -321,7 +271,6 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
           onPress={handleHadir}
           row
           backgroundColor="green"
-          // disabled={date === undefined}
           style={{ marginLeft: 8 }}>
           Hadir
         </Button>
