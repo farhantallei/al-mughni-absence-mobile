@@ -13,8 +13,8 @@ export type RootStackParamList = {
   Home: undefined;
   Absence: {
     program: {
-      id: number;
-      pengajarId: number | null;
+      id: string;
+      pengajarId: string | null;
       pengajarName?: string;
       name: string;
       status: string;

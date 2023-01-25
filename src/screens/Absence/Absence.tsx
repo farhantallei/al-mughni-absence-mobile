@@ -21,9 +21,9 @@ import Toast from 'react-native-easy-toast';
 import styles from './Absence.styles';
 
 interface form {
-  pelajarId: number;
-  pengajarId?: number;
-  programId: number;
+  pelajarId: string;
+  pengajarId?: string;
+  programId: string;
   date: string;
   reason?: string;
 }
@@ -34,7 +34,7 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
   const [showNotPresentModal, setShowNotPresentModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [error, setError] = useState(false);
-  const [userId] = useGlobalState<number>(['userId']);
+  const [userId] = useGlobalState<string>(['userId']);
   const [absent] = useGlobalState<AbsentResponse | null>([
     'absent',
     { program: route.params.program.name, date: formatDate(new Date()) },
@@ -85,6 +85,7 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
               presentStatus: present ? 'present' : 'absent',
               programStatus: 'available',
               pengajarId: route.params.program.pengajarId,
+              pengajarName: route.params.program.pengajarName || '',
               reason: form.reason || null,
             },
           ];
@@ -148,6 +149,7 @@ function Absence({ route, navigation }: RootStackScreenProps<'Absence'>) {
               presentStatus: present ? 'present' : 'absent',
               programStatus: 'available',
               pengajarId: route.params.program.pengajarId,
+              pengajarName: route.params.program.pengajarName || '',
               reason: form.reason || null,
             },
           ];

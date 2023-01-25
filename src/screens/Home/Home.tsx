@@ -3,7 +3,11 @@ import { Button, Container, TextInput } from '@app/components/ui';
 import { useGlobalState } from '@app/hooks';
 import { getAbsent } from '@app/services/absent';
 import { getPengajar, registerPelajar } from '@app/services/pengajar';
-import { addSchedule, updateSchedule } from '@app/services/schedule';
+import {
+  addSchedule,
+  deleteSchedule,
+  updateSchedule,
+} from '@app/services/schedule';
 import { RootStackScreenProps } from '@app/types';
 import { PelajarResponse, ProgramResponse } from '@app/types/rest';
 import { formatDate } from '@app/utils';
@@ -33,11 +37,11 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const udzurInputRef = useRef<TextInputRN>(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showReasonInputModal, setShowReasonInputModal] = useState(false);
-  const [pengajarId, setPengajarId] = useState(1);
-  const [programId, setProgramId] = useState(1);
+  const [pengajarId, setPengajarId] = useState('');
+  const [programId, setProgramId] = useState('');
   const toastRef = useRef<Toast>(null);
   const errorToastRef = useRef<Toast>(null);
-  const [userId] = useGlobalState<number>(['userId']);
+  const [userId] = useGlobalState<string>(['userId']);
   const [name] = useGlobalState<string | null>(['name']);
   const [programs] = useGlobalState<ProgramResponse[]>(['program']);
   const [pengajarList] = useGlobalState<PelajarResponse[]>([
@@ -52,11 +56,15 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const isFetching = useIsFetching(['pengajar']) + useIsFetching(['absent']);
 
   const [scheduleForm, setScheduleForm] = useState({
-    id: 0,
+    id: '',
     name: '',
     available: false,
     reason: '',
   });
+
+  useEffect(() => {
+    setProgramId(programs[0].id);
+  }, []);
 
   useEffect(() => {
     if (scheduleForm.reason != '') {
@@ -82,12 +90,12 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
     pengajarId,
     pengajarName,
   }: {
-    programId: number;
+    programId: string;
     programName: string;
     individual: boolean;
     status: string;
     reason: string | null;
-    pengajarId: number | null;
+    pengajarId: string | null;
     pengajarName?: string;
   }) {
     try {
@@ -134,14 +142,9 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
     }
   }
 
-  async function handleModal(programId: number) {
-    setProgramId(programId);
+  async function handleModal() {
     try {
-      await queryClient.prefetchQuery({
-        queryKey: ['pengajar', { id: programId }],
-        queryFn: () => getPengajar(programId),
-        retry: 1,
-      });
+      setPengajarId(pengajarList[0].id);
 
       setShowRegisterModal(true);
     } catch (err) {
@@ -153,10 +156,10 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
 
   const { mutate: startScheduleMutate, isLoading: isStartScheduleLoading } =
     useMutation(
-      (_var: { id: number; name: string }) =>
+      ({ id }: { id: string; name: string }) =>
         addSchedule({
           pengajarId: userId,
-          programId,
+          programId: id,
           date: formatDate(new Date()),
           available: true,
         }),
@@ -170,7 +173,7 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
 
           if (prevPrograms) {
             const programs: ProgramResponse[] = [
-              ...prevPrograms.filter(program => program.id !== programId),
+              ...prevPrograms.filter(program => program.id !== id),
               {
                 id,
                 name,
@@ -179,6 +182,9 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
                 presentStatus: 'alpha',
                 programStatus: 'available',
                 pengajarId: userId,
+                pengajarName:
+                  pengajarList?.filter(pengajar => pengajar.id === userId)[0]
+                    .name || '',
                 reason: null,
               },
             ];
@@ -204,17 +210,18 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const { mutate: updateScheduleMutate, isLoading: isUpdateScheduleLoading } =
     useMutation(
       ({
+        id,
         available,
         reason,
       }: {
-        id: number;
+        id: string;
         name: string;
         available: boolean;
         reason?: string;
       }) =>
         updateSchedule({
           pengajarId: userId,
-          programId,
+          programId: id,
           date: formatDate(new Date()),
           available,
           reason,
@@ -230,7 +237,7 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
 
           if (prevPrograms) {
             const programs: ProgramResponse[] = [
-              ...prevPrograms.filter(program => program.id !== programId),
+              ...prevPrograms.filter(program => program.id !== id),
               {
                 id,
                 name,
@@ -239,6 +246,9 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
                 presentStatus: 'alpha',
                 programStatus: available ? 'available' : 'alibi',
                 pengajarId: userId,
+                pengajarName:
+                  pengajarList?.filter(pengajar => pengajar.id === userId)[0]
+                    .name || '',
                 reason: reason || null,
               },
             ];
@@ -264,6 +274,53 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
       },
     );
 
+  const { mutate: deleteScheduleMutate, isLoading: isDeleteScheduleLoading } =
+    useMutation(
+      ({ id }: { id: string; name: string }) =>
+        deleteSchedule({
+          pengajarId: userId,
+          programId: id,
+          date: formatDate(new Date()),
+        }),
+      {
+        onMutate: async ({ id, name }) => {
+          resetError();
+          await queryClient.cancelQueries({ queryKey: ['program'] });
+
+          const prevPrograms = queryClient.getQueryData<ProgramResponse[]>([
+            'program',
+          ]);
+
+          if (prevPrograms) {
+            const programs: ProgramResponse[] = [
+              ...prevPrograms.filter(program => program.id !== id),
+              {
+                id,
+                name,
+                individual: false,
+                pengajar: true,
+                presentStatus: 'absent',
+                programStatus: 'unavailable',
+                pengajarId: userId,
+                pengajarName:
+                  pengajarList?.filter(pengajar => pengajar.id === userId)[0]
+                    .name || '',
+                reason: null,
+              },
+            ];
+            queryClient.setQueryData<ProgramResponse[]>(
+              ['program'],
+              programs.sort((a, b) => {
+                if (a.id < b.id) return -1;
+                if (a.id > b.id) return 1;
+                return 0;
+              }),
+            );
+          }
+        },
+      },
+    );
+
   const { mutate: registerMutate, isLoading: isRegisterLoading } = useMutation(
     () => registerPelajar({ pelajarId: userId, pengajarId, programId }),
     {
@@ -275,7 +332,7 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
         else if (error instanceof String) errorToastRef.current?.show(error);
         else errorToastRef.current?.show('ada kesalahan teknis');
       },
-      onSuccess({ programStatus, reason }) {
+      onSuccess({ pengajarName, programStatus, reason }) {
         const prevPrograms = queryClient.getQueryData<ProgramResponse[]>([
           'program',
         ]);
@@ -290,6 +347,7 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
             {
               ...rest,
               pengajarId,
+              pengajarName,
               programStatus,
               reason,
             },
@@ -332,6 +390,7 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
                 ({
                   id,
                   pengajarId,
+                  pengajarName,
                   name,
                   individual,
                   pengajar,
@@ -342,13 +401,10 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
                   <ProgramList.Item
                     key={id}
                     toastRef={toastRef}
-                    pengajarName={
-                      pengajarList?.filter(
-                        pengajar => pengajar.id === pengajarId,
-                      )[0]?.name || ''
-                    }
+                    pengajarName={pengajarName}
                     pengajarId={pengajarId}
                     program={name}
+                    programId={id}
                     individual={individual}
                     pengajar={pengajar}
                     presentStatus={presentStatus}
@@ -360,14 +416,15 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
                         programName: name,
                         individual,
                         pengajarId,
-                        pengajarName: pengajarList?.filter(
-                          pengajar => pengajar.id === pengajarId,
-                        )[0]?.name,
+                        pengajarName,
                         status: presentStatus,
                         reason,
                       })
                     }
-                    onRegister={() => handleModal(id)}
+                    onRegister={() => {
+                      setProgramId(id);
+                      handleModal();
+                    }}
                     onStart={() => startScheduleMutate({ id, name })}
                     onChange={() => {
                       if (programStatus === 'available') {
@@ -384,6 +441,7 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
                         available: true,
                       });
                     }}
+                    onDelete={() => deleteScheduleMutate({ id, name })}
                   />
                 ),
               )
@@ -392,7 +450,10 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
       </View>
       <Loading
         isLoading={
-          isFetching > 0 || isStartScheduleLoading || isUpdateScheduleLoading
+          isFetching > 0 ||
+          isStartScheduleLoading ||
+          isUpdateScheduleLoading ||
+          isDeleteScheduleLoading
         }
       />
       <Toast ref={toastRef} />

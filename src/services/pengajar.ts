@@ -3,16 +3,16 @@ import { makeRequest } from './makeRequest';
 
 const prefix = 'pengajar';
 
-export function getPengajar(programId: number) {
+export function getPengajar(programId: string) {
   return makeRequest<PelajarResponse[]>(`${prefix}/${programId}`, {
     method: 'GET',
   });
 }
 
 export function registerPelajar(data: {
-  pelajarId: number;
-  pengajarId: number;
-  programId: number;
+  pelajarId: string;
+  pengajarId: string;
+  programId: string;
 }) {
   return makeRequest<PelajarOnPengajarResponse>(`${prefix}`, {
     method: 'POST',

@@ -15,12 +15,13 @@ export interface ItemContext {
   presentStatus: PresentStatus;
   programStatus: ProgramStatus;
   pengajar: boolean;
-  pengajarId: number | null;
+  pengajarId: string | null;
   reason: string | null;
   onAbsen?: () => void;
   onRegister?: () => void;
   onStart?: () => void;
   onChange?: () => void;
+  onDelete?: () => void;
 }
 
 export const ItemContext = createContext<ItemContext>(null!);

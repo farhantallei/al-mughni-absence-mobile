@@ -8,8 +8,8 @@ export function getAbsent({
   programId,
   date,
 }: {
-  pelajarId: number;
-  programId: number;
+  pelajarId: string;
+  programId: string;
   date: string;
 }) {
   return makeRequest<AbsentResponse | null>(
@@ -21,9 +21,9 @@ export function getAbsent({
 }
 
 export function addAbsent(data: {
-  pelajarId: number;
-  pengajarId?: number;
-  programId: number;
+  pelajarId: string;
+  pengajarId?: string;
+  programId: string;
   date: string;
   present: boolean;
   reason?: string;
@@ -32,9 +32,9 @@ export function addAbsent(data: {
 }
 
 export function updateAbsent(data: {
-  pelajarId: number;
-  pengajarId?: number;
-  programId: number;
+  pelajarId: string;
+  pengajarId?: string;
+  programId: string;
   date: string;
   present: boolean;
   reason?: string;

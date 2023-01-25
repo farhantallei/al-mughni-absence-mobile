@@ -1,21 +1,22 @@
 export interface PelajarResponse {
-  id: number;
+  id: string;
   username: string;
   name: string;
 }
 
 export interface AbsentResponse {
-  id: number;
-  pengajarId: number | null;
-  programId: number;
+  id: string;
+  pengajarId: string | null;
+  programId: string;
   date: Date;
   present: boolean;
   reason: string | null;
 }
 
 export interface ProgramResponse {
-  id: number;
-  pengajarId: number | null;
+  id: string;
+  pengajarId: string | null;
+  pengajarName: string;
   name: string;
   individual: boolean;
   pengajar: boolean;
@@ -25,17 +26,18 @@ export interface ProgramResponse {
 }
 
 export interface ScheduleResponse {
-  id: number;
-  programId: number;
+  id: string;
+  programId: string;
   date: Date;
   available: boolean;
   reason: string | null;
 }
 
 export interface PelajarOnPengajarResponse {
-  pengajarId: number;
-  pelajarId: number;
-  programId: number;
+  pengajarId: string;
+  pelajarId: string;
+  programId: string;
+  pengajarName: string;
   programStatus: 'available' | 'unavailable' | 'alibi';
   reason: string | null;
 }

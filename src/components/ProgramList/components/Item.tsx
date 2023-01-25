@@ -3,6 +3,8 @@ import { View, Text, ColorValue } from 'react-native';
 import Toast from 'react-native-easy-toast';
 import { ItemContext, useItemContext } from './Item.context';
 import type { PresentStatus, ProgramStatus } from './Item.context';
+import { useQuery } from '@tanstack/react-query';
+import { getPengajar } from '@app/services/pengajar';
 
 type PresentIndicator<T = string> = Record<PresentStatus, T>;
 type ProgramIndicator<T = string> = Record<ProgramStatus, T>;
@@ -10,8 +12,9 @@ type ProgramIndicator<T = string> = Record<ProgramStatus, T>;
 interface ItemProps {
   toastRef: React.RefObject<Toast>;
   pengajarName: string;
-  pengajarId: number | null;
+  pengajarId: string | null;
   program: string;
+  programId: string;
   individual: boolean;
   pengajar: boolean;
   presentStatus: PresentStatus;
@@ -21,8 +24,9 @@ interface ItemProps {
   onRegister?: () => void;
   onStart?: () => void;
   onChange?: () => void;
+  onDelete?: () => void;
 }
-function Item({ presentStatus, programStatus, ...rest }: ItemProps) {
+function Item({ programId, presentStatus, programStatus, ...rest }: ItemProps) {
   const presentIndicatorLabel: PresentIndicator = {
     alpha: 'Alpha',
     present: 'Hadir',
@@ -56,6 +60,12 @@ function Item({ presentStatus, programStatus, ...rest }: ItemProps) {
     ...rest,
   };
 
+  useQuery({
+    queryKey: ['pengajar', { programId }],
+    queryFn: () => getPengajar(programId),
+    retry: 1,
+  });
+
   return (
     <ItemContext.Provider value={value}>
       <View
@@ -72,7 +82,9 @@ function Item({ presentStatus, programStatus, ...rest }: ItemProps) {
         </Text>
         {rest.pengajarId != null ? (
           <>
-            <Information keyLabel="Pengajar" label={rest.pengajarName} />
+            {!rest.pengajar ? (
+              <Information keyLabel="Pengajar" label={rest.pengajarName} />
+            ) : null}
             <Information
               keyLabel="Status"
               color={programIndicatorColor[programStatus]}
@@ -97,6 +109,7 @@ function Item({ presentStatus, programStatus, ...rest }: ItemProps) {
             backgroundColor="#7286D3">
             Print
           </Button>
+          <DeleteButton />
           <SubmitButton />
         </View>
       </View>
@@ -159,24 +172,42 @@ function ReasonStatus({ keyLabel }: { keyLabel: string }) {
   return null;
 }
 
+function DeleteButton() {
+  const { pengajar, programStatus, onDelete } = useItemContext();
+
+  if (pengajar && programStatus !== 'unavailable') {
+    return (
+      <Button
+        style={{ marginRight: 12 }}
+        hug
+        onPress={onDelete}
+        backgroundColor="red">
+        Delete
+      </Button>
+    );
+  }
+
+  return null;
+}
+
 function SubmitButton() {
   const {
     individual,
     presentIndicatorColor,
     pengajar,
     pengajarId,
+    presentStatus,
     programStatus,
     onAbsen,
     onRegister,
     onStart,
     onChange,
-    toastRef,
   } = useItemContext();
 
   if (individual)
     return (
       <Button hug onPress={onAbsen} backgroundColor={presentIndicatorColor}>
-        Absen
+        {presentStatus === 'present' ? 'Absen' : 'Presen'}
       </Button>
     );
   if (pengajar) {
@@ -213,7 +244,7 @@ function SubmitButton() {
       );
     return (
       <Button hug onPress={onAbsen} backgroundColor={presentIndicatorColor}>
-        Absen
+        {presentStatus === 'present' ? 'Absen' : 'Presen'}
       </Button>
     );
   }

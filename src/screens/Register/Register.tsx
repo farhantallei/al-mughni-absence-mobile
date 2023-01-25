@@ -36,7 +36,7 @@ function Register({ navigation }: RootStackScreenProps<'Register'>) {
     username: '',
     name: '',
   });
-  const [userId, setUserId] = useGlobalState<number | null>(['userId']);
+  const [userId, setUserId] = useGlobalState<string | null>(['userId']);
   const [username, setUsername] = useGlobalState<string | null>(['username']);
   const [name, setName] = useGlobalState<string | null>(['name']);
   const usernameInputRef = useRef<TextInputRN>(null);

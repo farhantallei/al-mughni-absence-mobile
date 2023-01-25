@@ -8,8 +8,8 @@ export function getSchedule({
   programId,
   date,
 }: {
-  pengajarId: number;
-  programId: number;
+  pengajarId: string;
+  programId: string;
   date: string;
 }) {
   return makeRequest<ScheduleResponse | null>(
@@ -21,8 +21,8 @@ export function getSchedule({
 }
 
 export function addSchedule(data: {
-  pengajarId: number;
-  programId: number;
+  pengajarId: string;
+  programId: string;
   date: string;
   available: boolean;
   reason?: string;
@@ -31,11 +31,19 @@ export function addSchedule(data: {
 }
 
 export function updateSchedule(data: {
-  pengajarId: number;
-  programId: number;
+  pengajarId: string;
+  programId: string;
   date: string;
   available: boolean;
   reason?: string;
 }) {
   return makeRequest<ScheduleResponse>(`${prefix}`, { method: 'PATCH', data });
+}
+
+export function deleteSchedule(data: {
+  pengajarId: string;
+  programId: string;
+  date: string;
+}) {
+  return makeRequest<ScheduleResponse>(`${prefix}`, { method: 'DELETE', data });
 }

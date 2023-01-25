@@ -1,4 +1,4 @@
-import { SERVER_PORT, SERVER_URL } from '@app/constants';
+import { SERVER_URL } from '@app/constants';
 import axios, { AxiosResponse, RawAxiosRequestConfig } from 'axios';
 
 interface FastifyError {
@@ -7,7 +7,7 @@ interface FastifyError {
   message: string;
 }
 
-const api = axios.create({ baseURL: `${SERVER_URL}:${SERVER_PORT}/api/` });
+const api = axios.create({ baseURL: `${SERVER_URL}/api/` });
 
 export async function makeRequest<Response = any, Params = any>(
   url: string,
