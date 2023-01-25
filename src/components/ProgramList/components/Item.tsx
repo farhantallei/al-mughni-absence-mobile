@@ -61,7 +61,7 @@ function Item({ programId, presentStatus, programStatus, ...rest }: ItemProps) {
   };
 
   useQuery({
-    queryKey: ['pengajar', { programId }],
+    queryKey: ['pengajar', { id: programId }],
     queryFn: () => getPengajar(programId),
     retry: 1,
   });
