@@ -17,6 +17,7 @@ export interface ItemContext {
   pengajar: boolean;
   pengajarId: string | null;
   reason: string | null;
+  isDayOff: boolean;
   onAbsen?: () => void;
   onRegister?: () => void;
   onStart?: () => void;

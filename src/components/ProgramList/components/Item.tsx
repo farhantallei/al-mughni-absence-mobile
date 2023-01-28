@@ -5,6 +5,7 @@ import { ItemContext, useItemContext } from './Item.context';
 import type { PresentStatus, ProgramStatus } from './Item.context';
 import { useQuery } from '@tanstack/react-query';
 import { getPengajar } from '@app/services/pengajar';
+import { useMemo } from 'react';
 
 type PresentIndicator<T = string> = Record<PresentStatus, T>;
 type ProgramIndicator<T = string> = Record<ProgramStatus, T>;
@@ -20,13 +21,20 @@ interface ItemProps {
   presentStatus: PresentStatus;
   programStatus: ProgramStatus;
   reason: string | null;
+  dayOff?: number[];
   onAbsen?: () => void;
   onRegister?: () => void;
   onStart?: () => void;
   onChange?: () => void;
   onDelete?: () => void;
 }
-function Item({ programId, presentStatus, programStatus, ...rest }: ItemProps) {
+function Item({
+  programId,
+  presentStatus,
+  programStatus,
+  dayOff,
+  ...rest
+}: ItemProps) {
   const presentIndicatorLabel: PresentIndicator = {
     alpha: 'Alpha',
     present: 'Hadir',
@@ -50,6 +58,13 @@ function Item({ programId, presentStatus, programStatus, ...rest }: ItemProps) {
     alibi: 'orange',
   };
 
+  const isDayOff = useMemo((): boolean => {
+    if (dayOff == null) return false;
+    const currentDay = new Date().getDay();
+    if (dayOff.includes(currentDay)) return true;
+    return false;
+  }, [dayOff]);
+
   const value: ItemContext = {
     presentIndicatorColor: presentIndicatorColor[presentStatus],
     presentIndicatorLabel: presentIndicatorLabel[presentStatus],
@@ -57,6 +72,7 @@ function Item({ programId, presentStatus, programStatus, ...rest }: ItemProps) {
     programIndicatorLabel: programIndicatorLabel[programStatus],
     programStatus,
     presentStatus,
+    isDayOff,
     ...rest,
   };
 
@@ -125,14 +141,15 @@ function PresentStatus({ keyLabel }: { keyLabel: string }) {
     pengajar,
     pengajarId,
     programStatus,
+    isDayOff,
   } = useItemContext();
 
   if (individual)
     return (
       <Information
-        keyLabel={keyLabel}
+        keyLabel={isDayOff ? 'Status' : keyLabel}
         color={presentIndicatorColor}
-        label={presentIndicatorLabel}
+        label={isDayOff ? 'Libur' : presentIndicatorLabel}
       />
     );
 
@@ -198,6 +215,7 @@ function SubmitButton() {
     pengajarId,
     presentStatus,
     programStatus,
+    isDayOff,
     onAbsen,
     onRegister,
     onStart,
@@ -206,8 +224,12 @@ function SubmitButton() {
 
   if (individual)
     return (
-      <Button hug onPress={onAbsen} backgroundColor={presentIndicatorColor}>
-        {presentStatus === 'present' ? 'Absen' : 'Presen'}
+      <Button
+        hug
+        onPress={onAbsen}
+        backgroundColor={presentIndicatorColor}
+        disabled={isDayOff}>
+        {isDayOff ? 'Libur' : presentStatus === 'present' ? 'Absen' : 'Presen'}
       </Button>
     );
   if (pengajar) {

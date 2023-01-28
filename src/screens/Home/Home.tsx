@@ -410,6 +410,7 @@ function Home({ navigation }: RootStackScreenProps<'Home'>) {
                     presentStatus={presentStatus}
                     programStatus={programStatus}
                     reason={reason}
+                    dayOff={name === 'Tahfizh' ? [0, 6] : undefined}
                     onAbsen={() =>
                       prefetchAbsence({
                         programId: id,
